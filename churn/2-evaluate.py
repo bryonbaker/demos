@@ -1,5 +1,5 @@
 """
-evaluate.py
+2-evaluate.py
 ───────────
 Evaluates the trained churn embedding model on held-out test data.
 
@@ -7,7 +7,7 @@ Loads model and data from S3, computes metrics (AUC-ROC, F1, Accuracy),
 and writes results to stdout (JSON format for easy parsing by pipeline).
 
 Usage:
-  python evaluate.py --s3-data-key churn/train.parquet \
+  python 2-evaluate.py --s3-data-key churn/train.parquet \
                      --s3-model-key models/churn_embedding_model.pt
 """
 
@@ -16,6 +16,10 @@ import io
 import json
 import os
 import sys
+from pathlib import Path
+
+# Add script directory to path so we can import local modules
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import boto3
 import numpy as np

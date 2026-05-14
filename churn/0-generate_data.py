@@ -1,5 +1,5 @@
 """
-generate_data.py
+0-generate_data.py
 ────────────────
 Generates synthetic churn dataset, writes a Parquet file locally, then uploads to S3.
 
@@ -17,8 +17,12 @@ When run from Jupyter (%run), extra ipykernel argv is ignored (``parse_known_arg
 from __future__ import annotations
 
 import argparse
+import sys
 import tempfile
 from pathlib import Path
+
+# Add script directory to path so we can import local modules
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import numpy as np
 import pandas as pd

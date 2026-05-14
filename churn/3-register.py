@@ -1,5 +1,5 @@
 """
-register.py
+3-register.py
 ───────────
 Registers the trained model if it meets quality thresholds.
 
@@ -7,7 +7,7 @@ Reads evaluation metrics, applies quality gate (AUC threshold),
 and writes model metadata to S3 if the model passes.
 
 Usage:
-  python register.py --metrics-file metrics.json \
+  python 3-register.py --metrics-file metrics.json \
                      --s3-model-key models/churn_embedding_model.pt \
                      --auc-threshold 0.70
 """
@@ -16,6 +16,10 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
+
+# Add script directory to path so we can import local modules
+sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
 import boto3
 

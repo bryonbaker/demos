@@ -1,0 +1,91 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: churn-ray-cluster
+  namespace: kubeflow
+spec:
+  rayVersion: "2.9.0"
+
+  # ── Head node ──────────────────────────────────────────────────────────────
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+      num-cpus: "0"           # Head does not run training tasks
+    template:
+      spec:
+        containers:
+          - name: ray-head
+            image: rayproject/ray:2.9.0-gpu
+            ports:
+              - containerPort: 6379   # Ray GCS
+              - containerPort: 8265   # Ray dashboard
+              - containerPort: 10001  # Ray client
+            resources:
+              requests:
+                cpu: "4"
+                memory: "8Gi"
+              limits:
+                cpu: "4"
+                memory: "8Gi"
+            env:
+              - name: AWS_ACCESS_KEY_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: access_key_id
+              - name: AWS_SECRET_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: secret_access_key
+              - name: AWS_DEFAULT_REGION
+                value: "us-east-1"
+              - name: AWS_S3_BUCKET
+                value: "data"
+              - name: AWS_S3_ENDPOINT
+                value: "https://s3.us-east-1.amazonaws.com"
+
+  # ── Worker nodes (2 GPU workers) ───────────────────────────────────────────
+  workerGroupSpecs:
+    - groupName: gpu-workers
+      replicas: 2
+      minReplicas: 2
+      maxReplicas: 4
+      rayStartParams:
+        num-gpus: "1"
+        num-cpus: "8"
+      template:
+        spec:
+          containers:
+            - name: ray-worker
+              image: rayproject/ray:2.9.0-gpu
+              resources:
+                requests:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+                limits:
+                  cpu: "8"
+                  memory: "32Gi"
+                  nvidia.com/gpu: "1"
+              env:
+              - name: AWS_ACCESS_KEY_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: access_key_id
+              - name: AWS_SECRET_ACCESS_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: s3-credentials
+                    key: secret_access_key
+              - name: AWS_DEFAULT_REGION
+                value: "us-east-1"
+              - name: AWS_S3_BUCKET
+                value: "data"
+              - name: AWS_S3_ENDPOINT
+                value: "https://s3.us-east-1.amazonaws.com"
+          tolerations:
+            - key: "nvidia.com/gpu"
+              operator: "Exists"
+              effect: "NoSchedule"
