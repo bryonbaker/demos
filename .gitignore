@@ -1,4 +1,7 @@
 churn/churn.code-workspace
+churn/data/
+fraud/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
