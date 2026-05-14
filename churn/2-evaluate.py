@@ -14,7 +14,6 @@ Usage:
 import argparse
 import io
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -30,10 +29,14 @@ from sklearn.metrics import roc_auc_score, f1_score, accuracy_score
 from s3_shakeout import load_config, make_s3_client
 from model import ChurnEmbeddingModel
 
+# ── S3 Bucket Configuration ────────────────────────────────────────────────────
+DATA_BUCKET = "data"
+MODELS_BUCKET = "models"
+
 
 # ── Main evaluation function ──────────────────────────────────────────────────
 
-def evaluate_model(s3_data_key: str, s3_model_key: str, s3_bucket: str = None):
+def evaluate_model(s3_data_key: str, s3_model_key: str):
     """
     Load model and data from S3, evaluate on held-out test set.
 
@@ -42,21 +45,20 @@ def evaluate_model(s3_data_key: str, s3_model_key: str, s3_bucket: str = None):
     """
     cfg = load_config()
     s3 = make_s3_client(cfg)
-    bucket = s3_bucket if s3_bucket else cfg["bucket"]
 
-    print(f"Loading model from s3://{bucket}/{s3_model_key}", file=sys.stderr)
+    print(f"Loading model from s3://{MODELS_BUCKET}/{s3_model_key}", file=sys.stderr)
 
     # Load model
-    obj = s3.get_object(Bucket=bucket, Key=s3_model_key)
+    obj = s3.get_object(Bucket=MODELS_BUCKET, Key=s3_model_key)
     state = torch.load(io.BytesIO(obj["Body"].read()), map_location="cpu")
     model = ChurnEmbeddingModel()
     model.load_state_dict(state)
     model.eval()
 
-    print(f"Loading data from s3://{bucket}/{s3_data_key}", file=sys.stderr)
+    print(f"Loading data from s3://{DATA_BUCKET}/{s3_data_key}", file=sys.stderr)
 
     # Load data (use last 20% as held-out test)
-    obj = s3.get_object(Bucket=bucket, Key=s3_data_key)
+    obj = s3.get_object(Bucket=DATA_BUCKET, Key=s3_data_key)
     df = pd.read_parquet(io.BytesIO(obj["Body"].read()))
     df = df.iloc[int(len(df) * 0.8):]  # held-out split
 
@@ -99,8 +101,6 @@ def evaluate_model(s3_data_key: str, s3_model_key: str, s3_bucket: str = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate churn embedding model")
-    parser.add_argument("--s3-bucket", default=None,
-                        help="S3 bucket (default: from AWS_S3_BUCKET env)")
     parser.add_argument("--s3-data-key", default="churn/train.parquet",
                         help="S3 key for training data")
     parser.add_argument("--s3-model-key", default="models/churn_embedding_model.pt",
@@ -113,7 +113,6 @@ if __name__ == "__main__":
     metrics = evaluate_model(
         s3_data_key=args.s3_data_key,
         s3_model_key=args.s3_model_key,
-        s3_bucket=args.s3_bucket,
     )
 
     # Write metrics as JSON

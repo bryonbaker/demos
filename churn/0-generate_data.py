@@ -7,9 +7,9 @@ S3 connectivity matches ``s3_shakeout.py``: the same environment variables are r
 for upload (``AWS_ACCESS_KEY_ID``, ``AWS_SECRET_ACCESS_KEY``, ``AWS_DEFAULT_REGION``,
 ``AWS_S3_BUCKET``, ``AWS_S3_ENDPOINT``). Optional ``AWS_SESSION_TOKEN``.
 
-  python generate_data.py --n 2000 --key churn/train.parquet
+  python 0-generate_data.py --n 2000 --key churn/train.parquet
 
-``--bucket`` overrides ``AWS_S3_BUCKET`` for the upload destination only.
+Data is uploaded to the DATA_BUCKET constant defined in this script.
 
 When run from Jupyter (%run), extra ipykernel argv is ignored (``parse_known_args``).
 """
@@ -28,6 +28,9 @@ import numpy as np
 import pandas as pd
 
 from s3_shakeout import load_config, make_s3_client
+
+# ── S3 Bucket Configuration ────────────────────────────────────────────────────
+DATA_BUCKET = "data"
 
 
 def generate_churn_dataset(n: int = 2000, seed: int = 42) -> pd.DataFrame:
@@ -101,12 +104,6 @@ def upload_to_s3(df: pd.DataFrame, bucket: str, key: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--n", type=int, default=2000)
-    parser.add_argument(
-        "--bucket",
-        type=str,
-        default=None,
-        help="S3 bucket (default: AWS_S3_BUCKET from environment)",
-    )
     parser.add_argument("--key", type=str, default="churn/train.parquet")
     parser.add_argument(
         "--local",
@@ -120,8 +117,7 @@ if __name__ == "__main__":
 
     cfg = load_config()
     client = make_s3_client(cfg)
-    bucket = args.bucket if args.bucket is not None else cfg["bucket"]
 
     df = generate_churn_dataset(n=args.n)
     write_parquet_local(df, local_path)
-    upload_file_to_s3(local_path, bucket=bucket, key=args.key, client=client)
+    upload_file_to_s3(local_path, bucket=DATA_BUCKET, key=args.key, client=client)

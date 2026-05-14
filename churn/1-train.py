@@ -9,13 +9,13 @@ Steps:
   3. Saves the trained model to S3
 """
 
+import io
 import sys
 from pathlib import Path
 
 # Add script directory to path so we can import local modules
 sys.path.insert(0, str(Path(__file__).parent.absolute()))
 
-import io
 import numpy as np
 import pandas as pd
 import torch
@@ -24,6 +24,10 @@ from torch.utils.data import DataLoader
 
 from s3_shakeout import load_config, make_s3_client
 from model import ChurnDataset, ChurnEmbeddingModel
+
+# ── S3 Bucket Configuration ────────────────────────────────────────────────────
+DATA_BUCKET = "data"
+MODELS_BUCKET = "models"
 
 
 # ── S3 helpers ─────────────────────────────────────────────────────────────────
@@ -55,10 +59,9 @@ def train_model(
     # Setup S3
     s3_cfg = load_config()
     s3 = make_s3_client(s3_cfg)
-    bucket = s3_cfg["bucket"]
 
-    print(f"Loading data from s3://{bucket}/{s3_data_key}")
-    df = read_parquet_from_s3(s3_data_key, bucket=bucket, client=s3)
+    print(f"Loading data from s3://{DATA_BUCKET}/{s3_data_key}")
+    df = read_parquet_from_s3(s3_data_key, bucket=DATA_BUCKET, client=s3)
 
     # Create dataset and dataloader
     dataset = ChurnDataset(df)
@@ -95,8 +98,8 @@ def train_model(
         print(f"Epoch {epoch+1}/{epochs}  loss={avg_loss:.4f}")
 
     # Save model to S3
-    print(f"\nSaving model to s3://{bucket}/{s3_model_key}")
-    save_model_to_s3(model, s3_model_key, bucket=bucket, client=s3)
+    print(f"\nSaving model to s3://{MODELS_BUCKET}/{s3_model_key}")
+    save_model_to_s3(model, s3_model_key, bucket=MODELS_BUCKET, client=s3)
     print("Training complete!")
 
 
